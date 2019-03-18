@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# John M. Campbell
+# 2019-03-06
+
+# Description: Open can0 connection on PocketBeagle at 125000 bps
+# Note: NEED to be superuser to execute properly
+
+config-pin P1.26 can; config-pin P1.28 can; config-pin -q P1.26; config-pin -q P1.28;
+
+ip link set can0 up type can bitrate 125000
+
+ifconfig can0 up
