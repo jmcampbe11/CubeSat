@@ -1,0 +1,18 @@
+#!/bin/bash
+
+rm /home/debian/log_OEM7.txt
+touch /home/debian/log_OEM7.txt
+
+/usr/bin/CAN_logdata.sh &
+
+sleep "$1"m
+
+VAR=`pgrep -n candump`
+if [ -z "$VAR" ]
+then
+        :
+else
+        kill "$VAR"
+fi
+
+echo "unlogall ccom1" > /dev/ttyO2
