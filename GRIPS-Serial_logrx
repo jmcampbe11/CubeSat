@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Author: Ryan Tompkins
+# Date: 03/21/2019
+# Description: Log rxstatus once over serial into commstatus.txt file
+
+rm /home/debian/CommStatus_logs.txt
+touch /home/debian/CommStatus_logs.txt
+
+echo "unlogall" > /dev/ttyO2
+echo "log rxstatus ontime 0.5" > /dev/ttyO2
+
+( cat < /dev/ttyO2 ) > /home/debian/CommStatus_logs.txt
