@@ -1,0 +1,56 @@
+GRIPS_Listener.sh
+
+#!/bin/bash
+
+# John M. Campbell
+# Created: 2019-03-19
+# Last edited: 2019-03-20
+
+# Description:
+
+while :
+do
+        temp=$(candump -n 1 can1,567:7FF )
+
+        devcmd=$( echo $temp | awk '{ print $4 }' )
+
+                case "$devcmd" in
+
+                01) echo "CMD 1"
+                proto=$( echo $temp | awk '{ print $5 }' )
+                logtime1=$( echo $temp | awk '{ print $6$7 }' )
+                echo "$logtime1"
+                logtime2=$( echo $(( 0x${logtime1} )) )
+                echo "$logtime2"
+                if [ "$proto" -eq 01 ]
+                then
+                        echo "hello"
+                        USB_backgroundlog.sh "$logtime2" &
+                else
+                        CAN_backgroundlog.sh "$logtime2" &
+                fi
+                ;;
+
+                02) echo "CMD 2"
+                RXStatus_v2.sh &
+                ;;
+
+                03) echo "CMD 3"
+                proto=$( echo $temp | awk '{ print $5 }' )
+                if [ "$proto" -eq 01 ]
+                then
+                        USB_killlog.sh
+                else
+                        CAN_killlog.sh
+                fi
+                ;;
+
+                04) echo "CMD 4"
+                SendFile.sh /home/debian/log_OEM7.txt
+                ;;
+
+                05) echo "CMD 5"
+                SendFile.sh /home/debian/CommStatus.txt
+                ;;
+        esac
+done
