@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# Author: Ryan Tompkins
+# Date: 03/20/2019
+# Description: Pings serial port with rxstatus and stores in text file to be checked
+
+rm /home/debian/CommStatus_logs.txt
+touch /home/debian/CommStatus_logs.txt
+
+echo "unlogall" > /dev/ttyO2
+echo "log rxstatus ontime 0.1" > /dev/ttyO2
+( cat < /dev/ttyO2 ) > /home/debian/CommStatus_logs.txt
