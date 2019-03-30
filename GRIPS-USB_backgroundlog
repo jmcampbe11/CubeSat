@@ -1,0 +1,18 @@
+#!/bin/bash
+
+rm /home/debian/log_OEM7.txt
+touch /home/debian/log_OEM7.txt
+
+/usr/bin/USB_logdata2.sh &
+
+sleep "$1"m
+
+VAR=`pgrep -n str2str`
+if [ -z "$VAR" ]
+then
+        :
+else
+        kill "$VAR"
+fi
+
+echo "unlogall" > /dev/ttyUSB0
