@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Author: Ryan Tompkins
+# Date: 03/20/2019
+# Description: Ping USB port using RXSTATUS log, dump response into text file
+
+rm /home/debian/CommStatus_logs.txt
+touch /home/debian/CommStatus_logs.txt
+
+echo "unlogall" > /dev/ttyUSB0
+echo "log rxstatus ontime 0.2" > /dev/ttyUSB0
+
+str2str -in serial://ttyUSB0 -out /home/debian/CommStatus_logs.txt &> /dev/null
