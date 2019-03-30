@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Author: Ryan Tompkins
+# Date: 03/20/2019
+# Description: Poll CAN port using rxstatus, store results in file, then use this to see if CAN works
+
+rm /home/debian/CommStatus_logs.txt
+touch /home/debian/CommStatus_logs.txt
+
+echo "unlogall ccom1" > /dev/ttyUSB0
+echo "log ccom1 rxstatus ontime 0.2" > /dev/ttyUSB0
+
+candump can0 > CommStatus_logs.txt
