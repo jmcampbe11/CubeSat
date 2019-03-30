@@ -1,0 +1,6 @@
+#!/bin/bash
+
+echo "unlogall" > /dev/ttyUSB0
+echo "log rangecmp4 ontime 0.01" > /dev/ttyUSB0
+
+str2str -in serial://ttyUSB0 -out /home/debian/log_OEM7.txt &> /dev/null
