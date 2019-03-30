@@ -1,0 +1,94 @@
+#!/bin/bash
+
+# Author: Ryan Tompkins
+# Date: 03/20/2019
+# Description: Call functions to poll different comm ports, check response file to see if it is empty, set status of each comm port based off this
+
+#################################################################
+
+rm /home/debian/CommStatus.txt
+touch /home/debian/CommStatus.txt
+
+/usr/bin/USB_rxstatus.sh &
+sleep 0.5s
+
+VAR=`pgrep -n str2str`
+kill "$VAR"
+
+if [ -s /home/debian/CommStatus_logs.txt ]
+then
+        echo "USB is working" > /home/debian/CommStatus.txt
+else
+        echo "USB is not working" > /home/debian/CommStatus.txt
+fi
+
+echo "unlogall" > /dev/ttyUSB0
+
+################################################################
+
+/usr/bin/Serial_rxstatus.sh &
+sleep 0.5s
+
+VAR=`pgrep -n cat`
+kill "$VAR"
+
+if [ -s /home/debian/CommStatus_logs.txt ]
+then
+        echo "Serial is working" >> /home/debian/CommStatus.txt
+else
+        echo "Serial is not working" >> /home/debian/CommStatus.txt
+fi
+
+echo "unlogall" > /dev/ttyO2
+
+################################################################
+
+VAR1=`awk '{if(NR==2) print $0}' /home/debian/CommStatus.txt`
+VAR2=`awk '{if(NR==1) print $0}' /home/debian/CommStatus.txt`
+
+if [ "$VAR1" = "Serial is working" ]
+then
+         /usr/bin/CAN_rxstatus.sh &
+elif [ "$VAR2" = "USB is working" ]
+then
+        /usr/bin/CAN_rxstatusUSB.sh &
+else
+        :
+fi
+
+sleep 0.5s
+
+VAR=`pgrep -n candump`
+kill "$VAR"
+echo "unlogall" > /dev/ttyUSB0
+
+if [ -s /home/debian/CommStatus_logs.txt ]
+then
+        echo "CAN is working" >> /home/debian/CommStatus.txt
+else
+        echo "CAN is not working" >> /home/debian/CommStatus.txt
+fi
+
+if [ "$VAR1" = "Serial is working" ]
+then
+        /usr/bin/Serial_logrx.sh &
+        sleep 2s
+        VARx=`pgrep -n cat`
+        kill "$VARx"
+        NumLog=`grep -n -m 1 RXSTATUS /home/debian/CommStatus_logs.txt | sed 's/\([0-9]*\).*/\1/'`
+        RXLog=`cat /home/debian/CommStatus_logs.txt | awk -v "NumLog=$NumLog" 'NR >= NumLog && NR <= (NumLog+6)'`
+        echo "$RXLog" >> /home/debian/CommStatus.txt
+        echo "unlogall" > /dev/ttyO2
+elif [ "$VAR2" = "USB is working" ]
+then
+        /usr/bin/USB_logrx.sh &
+        sleep 2s
+        VARx=`pgrep -n cat`
+        kill "$VARx"
+        NumLog=`grep -n -m 1 RXSTATUS /home/debian/CommStatus_logs.txt | sed 's/\([0-9]*\).*/\1/'`
+        RXLog=`cat /home/debian/CommStatus_logs.txt | awk -v "NumLog=$NumLog" 'NR >= NumLog && NR <= (NumLog+6)'`
+        echo "$RXLog" >> /home/debian/CommStatus.txt
+        echo "unlogall" > /dev/ttyUSB0
+else
+        echo "No connection to OEM, cannot obtain logs" >> /home/debian/CommStatus.txt
+fi
