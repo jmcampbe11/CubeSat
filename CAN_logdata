@@ -1,0 +1,6 @@
+#!/bin/bash
+
+echo "unlogall ccom1" > /dev/ttyO2
+echo "log ccom1 rangecmp4 ontime 0.01" > /dev/ttyO2
+
+candump can0 > /home/debian/log_OEM7.txt
