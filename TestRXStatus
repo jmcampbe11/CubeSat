@@ -1,0 +1,70 @@
+#!/bin/bash
+
+rm /home/debian/CommStatus.txt
+touch /home/debian/CommStatus.txt
+
+/usr/bin/USB_rxstatus.sh &
+sleep 2s
+
+VAR=`pgrep -n str2str`
+kill "$VAR"
+
+if [ -s /home/debian/CommStatus_logs.txt ]
+then
+        echo "USB is working" > /home/debian/CommStatus.txt
+else
+        echo "USB is not working" > /home/debian/CommStatus.txt
+fi
+
+echo "unlogall" > /dev/ttyUSB0
+sleep 0.5s
+
+/usr/bin/Serial_rxstatus.sh &
+sleep 3s
+
+VAR=`pgrep -n cat`
+sleep 2s
+kill "$VAR"
+
+if [ -s /home/debian/CommStatus_logs.txt ]
+then
+        echo "Serial is working" >> /home/debian/CommStatus.txt
+else
+        echo "Serial is not working" >> /home/debian/CommStatus.txt
+fi
+
+sleep 1s
+
+VAR1=`awk '{if(NR==1) print $0}' /home/debian/CommStatus.txt`
+VAR2=`awk '{if(NR==2) print $0}' /home/debian/CommStatus.txt`
+
+if [ "$VAR1" = "USB is working" ]
+then
+        echo 1
+        sleep 1s
+        /usr/bin/CAN_rxstatusUSB.sh &
+        sleep 1s
+elif [ "$VAR2" = "Serial is working" ]
+then
+        echo 2
+        sleep 1s
+        /usr/bin/CAN_rxstatus.sh &
+        sleep 1s
+else
+        :
+fi
+
+sleep 5s
+
+VAR=`pgrep -n candump`
+kill "$VAR"
+sleep 0.5s
+echo "unlogall" > /dev/ttyUSB0
+
+if [ -s /home/debian/CommStatus_logs2.txt ]
+then
+        echo "CAN is working" >> /home/debian/CommStatus.txt
+else
+        echo "CAN is not working" >> /home/debian/CommStatus.txt
+fi
+cat /home/debian/CommStatus.txt
