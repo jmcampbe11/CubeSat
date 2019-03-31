@@ -4,10 +4,12 @@
 # Date: 03/20/2019
 # Description: Poll CAN port using rxstatus, store results in file, then use this to see if CAN works
 
-ifconfig can0 down
-ifconfig can0 up
+rm /home/debian/CommStatus_logs2.txt
+touch /home/debian/CommStatus_logs2.txt
 
-echo "unlogall" > /dev/ttyO2
-echo "log ccom1 rxstatus ontime 0.2" > /dev/ttyO2
+echo "unlogall ccom1" > /dev/ttyO2
+sleep 2s
+echo "log ccom1 rxstatus ontime 1" > /dev/ttyO2
 
-candump can0 > /home/debian/CommStatus_logs.txt
+echo 5
+( candump can0 ) > /home/debian/CommStatus_logs2.txt
