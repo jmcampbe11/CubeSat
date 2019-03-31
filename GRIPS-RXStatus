@@ -10,7 +10,7 @@ rm /home/debian/CommStatus.txt
 touch /home/debian/CommStatus.txt
 
 /usr/bin/USB_rxstatus.sh &
-sleep 0.5s
+sleep 1s
 
 VAR=`pgrep -n str2str`
 kill "$VAR"
@@ -23,11 +23,12 @@ else
 fi
 
 echo "unlogall" > /dev/ttyUSB0
+sleep 0.5s
 
 ################################################################
 
 /usr/bin/Serial_rxstatus.sh &
-sleep 0.5s
+sleep 1s
 
 VAR=`pgrep -n cat`
 kill "$VAR"
@@ -40,6 +41,7 @@ else
 fi
 
 echo "unlogall" > /dev/ttyO2
+sleep 2s
 
 ################################################################
 
@@ -48,18 +50,25 @@ VAR2=`awk '{if(NR==1) print $0}' /home/debian/CommStatus.txt`
 
 if [ "$VAR1" = "Serial is working" ]
 then
-         /usr/bin/CAN_rxstatus.sh &
+        echo 1
+        sleep 1s
+        /usr/bin/CAN_rxstatus.sh &
+        sleep 2s
 elif [ "$VAR2" = "USB is working" ]
 then
+        echo 2
+        sleep 1s
         /usr/bin/CAN_rxstatusUSB.sh &
+        sleep 2s
 else
         :
 fi
 
-sleep 0.5s
+sleep 1s
 
 VAR=`pgrep -n candump`
 kill "$VAR"
+sleep 0.5s
 echo "unlogall" > /dev/ttyUSB0
 
 if [ -s /home/debian/CommStatus_logs.txt ]
@@ -71,19 +80,19 @@ fi
 
 if [ "$VAR1" = "Serial is working" ]
 then
-        /usr/bin/Serial_logrx.sh &
+        /usr/bin/Serial_rxstatus.sh &
         sleep 2s
         VARx=`pgrep -n cat`
         kill "$VARx"
         NumLog=`grep -n -m 1 RXSTATUS /home/debian/CommStatus_logs.txt | sed 's/\([0-9]*\).*/\1/'`
-        RXLog=`cat /home/debian/CommStatus_logs.txt | awk -v "NumLog=$NumLog" 'NR >= NumLog && NR <= (NumLog+6)'`
+        RXLog=`cat /home/debian/CommStatus_logs.txt | awk -v "NumLog=$NumLog" 'NR >= NumLog && NR <= (NumLog+12)'`
         echo "$RXLog" >> /home/debian/CommStatus.txt
         echo "unlogall" > /dev/ttyO2
 elif [ "$VAR2" = "USB is working" ]
 then
-        /usr/bin/USB_logrx.sh &
+        /usr/bin/USB_rxstatus.sh &
         sleep 2s
-        VARx=`pgrep -n cat`
+        VARx=`pgrep -n str2str`
         kill "$VARx"
         NumLog=`grep -n -m 1 RXSTATUS /home/debian/CommStatus_logs.txt | sed 's/\([0-9]*\).*/\1/'`
         RXLog=`cat /home/debian/CommStatus_logs.txt | awk -v "NumLog=$NumLog" 'NR >= NumLog && NR <= (NumLog+6)'`
