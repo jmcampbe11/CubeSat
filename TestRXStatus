@@ -67,4 +67,3 @@ then
 else
         echo "CAN is not working" >> /home/debian/CommStatus.txt
 fi
-cat /home/debian/CommStatus.txt
