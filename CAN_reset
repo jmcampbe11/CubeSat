@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# John M. Campbell
+# 2019-03-06
+
+# Description: Reopen can0 connection on PocketBeagle
+# Note: NEED to be superuser to execute properly
+
+ifconfig can0 down
+ifconfig can0 up

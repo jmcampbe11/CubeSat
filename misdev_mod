@@ -1,0 +1,138 @@
+#!/bin/bash
+
+# John M. Campbell
+# Created: 2019-03-19
+# Last edited: 2019-04-02
+
+# Description: misdev sends commands from the OBC to the GRIPS and Imager subsystems
+
+target=""
+devcmd=0
+
+usage() { echo "Usage: $0 [-t <G|I>] [-c <1-5>] [-p <U|C>] [-d <1-32767>] [-a <00-ff>] [-m <0000-ffff>]" 1>&2; }
+
+info() { cat /home/debian/John_CAN_Code/misdev_info.txt ; exit 1; }
+
+# -- Handle input options --
+while getopts ":t:c:d:p:a:m:h" options; do
+
+case "${options}" in
+
+# targeted subsystem
+t)
+target=${OPTARG}
+        if [[ "$target" != G ]] && [[ "$target" != I ]] ; then
+                echo "Issue with (-t): Please enter 'G' for GRIPS or 'I' for Imager"
+        fi
+;;
+
+# command intended for targeted subsystem
+c)
+devcmd=${OPTARG}
+        if [[ ! $devcmd =~ ^[0-9]+$ ]]; then
+                echo "not an int"
+        elif [[ $devcmd -lt 1 ]] || [[ $devcmd -gt 6 ]]; then
+                echo "not witin range"
+        fi
+;;
+
+# GRIPS: set duration of logs
+d)
+dur=${OPTARG}
+        if [[ ! $dur =~ ^[0-9]+$ ]]; then
+                echo "not an int"
+        elif [[ $dur -lt 1 ]] || [[ $dur -gt 32767 ]]; then
+                echo "not witin range"
+        else
+                durx1=$( printf '%.4x' $dur | cut -c 1-2)
+                durx2=$( printf '%.4x' $dur | cut -c 3-4)
+
+        fi
+;;
+
+# GRIPS: set OEM7's communication protocol
+p)
+proto=${OPTARG}
+        if [[ "$proto" != U ]] && [[ "$proto" != C ]] ; then
+                echo "Issue with (-p): Please enter 'U' for USB or 'C' for CAN & Serial"
+        else
+                if [[ "$proto" == U ]]; then
+                        # USB
+                        proto_num=01
+                else
+                        # CAN Bus & Serial
+                        proto_num=02
+                fi
+        fi
+;;
+
+# display help
+h)
+        usage
+        info
+;;
+
+# otherwise display usage
+*)
+        usage
+        exit 1
+;;
+
+esac
+done
+
+# -- GRIPS commands --
+if [[ "$target" == G ]] ; then
+        case "$devcmd" in
+        1) #Begin log
+        cansend can0 567#01.${proto_num}.${durx1}.${durx2}
+        ;;
+
+        3) # Kill log
+        cansend can0 567#03.${proto_num}
+        ;;
+
+        4) # Request log
+        cansend can0 567#04
+
+        # listen for n frames (up to 4 digit hex value for n)
+        n=$(candump -n 1 can0,010:7FF | awk '{ print $4$5$6$7 }')
+        n=$( echo $(( 0x${n} )) )
+        echo "Receiving $n CAN frames"
+
+        # send CAN frames to file
+        candump -n $n can0,011:7FF  > /home/debian/value_added/temp.log
+        cat /home/debian/value_added/temp.log | awk '{print $4 $5 " " $6 $7 " " $8 $9 " " $10 $11}' | xxd -r -p > /home/debian/value_added/gnss_temp.log
+        echo "Log transmission complete"
+        ;;
+
+esac
+
+else
+        case "$devcmd" in
+        1) # retrieve photo
+        echo "Requesting photo"
+        cansend can0 79a#01
+         # Request photo
+
+        # listen for n frames (up to 4 digit hex value for n)
+        n=$(candump -n 1 can0,050:7FF | awk '{ print $4$5$6$7 }')
+        ndec=$( echo $(( 0x${n} )) )
+        echo "Receiving ${ndec} CAN frames"
+
+        # send CAN frames to photo file
+        candump -n $ndec can0,051:7FF  > /home/debian/value_added/temp.log
+
+        cat /home/debian/value_added/temp.log | awk '{print $4 $5 " " $6 $7 " " $8 $9 " " $10 $11}' | xxd -r -p > /home/debian/value_added/img_temp.log
+
+        echo "Image transmission complete"
+        ;;
+
+        2) # default configuration
+        cansend can0 79a#02
+        ;;
+
+        esac
+fi
+
+exit 0

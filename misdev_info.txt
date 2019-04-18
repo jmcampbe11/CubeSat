@@ -1,0 +1,38 @@
+The misdev command is used to issue commands to the GRIPS and Imager microcontrollers.
+
+The targeted subsystem is specified by the (-t) option. This option takes one of two characters:
+G - for GRIPS
+I - for Imager
+
+The command for the targeted subsystem is specificed by the (-c) option. This option takes a single integer input.
+The list of commands for each subsystem is shown below.
+
+-- COMMAND LIST --
+GRIPS Commands:
+1. Log GNSS data from OEM719 to GRIPS PocketBeagle (PB)
+   This command requires the (-p) and (-d) options.
+
+2. Log RXSTATUS from OEM719 to GRIPS PB
+
+3. Kill GNSS logging
+   This command requires the (-p) option.
+
+4. Retrieve GNSS data log from GRIPS PB
+
+5. Retrieve RXSTATUS log from GRIPS PB
+
+Imager Commands:
+1. Take a photo
+
+2. Set default configuration
+
+3. Set exposure
+   This command requires the (-d) option.
+
+4. I2C write
+   This command requires the (-a) and (-m) options.
+
+5. I2C read
+   This command requires the (-a) option.
+
+6. Reset camera

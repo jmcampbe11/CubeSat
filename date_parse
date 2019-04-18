@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# John M. Campbell
+# Created: 2019-04-02
+# Last edited: 2019-04-02
+
+# Description: Updates OBC date and time to the value returned by the OEM719
+
+# get date message
+date_msg=$( cat /home/debian/John_CAN_Code/grips_time.log )
+
+# extract date information
+year=$( echo $date_msg | awk {'print $6'} )
+month=$( echo $date_msg | awk {'print $7'} )
+day=$( echo $date_msg | awk {'print $8'} )
+hour=$( echo $date_msg | awk {'print $9'} )
+minute=$( echo $date_msg | awk {'print $10'} )
+second=$( echo $date_msg | awk {'print $11'} )
+
+# ensure month, day, hour, and minute values have two digits
+month2=$( printf "%02d" $month )
+day2=$( printf "%02d" $day )
+hour2=$( printf "%02d" $hour )
+minute2=$( printf "%02d" $minute )
+second2=$( printf "%02d" $(( (${second}/1000)%60 )) ) # handles seconds = 60999
+
+# set date and time
+date +%Y%m%d -s "${year}${month2}${day2}"
+date +%T -s "${hour2}:${minute2}:${second2}"

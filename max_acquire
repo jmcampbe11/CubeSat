@@ -1,0 +1,84 @@
+#!/bin/bash
+
+# John M. Campbell
+# Created: 2019-03-30
+# Last edited: 2019-04-02
+
+echo "Running "max_acquire"..."
+
+usage() { echo "Usage: $0 [-d <1-32767>] [-n <int>] [-s <int>]" 1>&2; }
+
+#info() { cat ; exit 1; }
+
+# -- Handle input options --
+while getopts ":d:n:s:k:h" options; do
+
+        case "${options}" in
+
+                d)
+                dur=${OPTARG}
+                ;;
+
+                n)
+                num_photos=${OPTARG}
+                ;;
+
+                s)
+                spacing=${OPTARG}
+                ;;
+
+                k)
+                kill_time=${OPTARG}
+                ;;
+
+                h)
+                usage
+                echo "info"
+                ;;
+
+                *)
+                usage
+                ;;
+        esac
+done
+
+
+# wait for extended period
+
+sleep ${spacing}
+echo "Finished delay"
+
+# begin GNSS log for x minutes
+/home/debian/value_added/misdev_mod -t G -c 1 -p U -d ${dur}
+echo "Started GNSS log"
+
+# kill the gnss log
+sleep ${kill_time}s
+
+/home/debian/value_added/misdev_mod -t G -c 3 -p U
+
+# begin by seting camera to default
+/home/debian/value_added/misdev_mod -t I -c 2
+
+#take y photos, photos are spaced by k minutes
+for ((i=0; i<=$num_photos-1; i+=1))
+do
+        sleep 0.1s
+        /home/debian/value_added/misdev_mod -t I -c 1
+        echo ""
+done
+
+echo "Requesting GNSS log"
+
+# retrieve GNSS log
+/home/debian/value_added/misdev_mod -t G -c 4
+echo "Retrieved GNSS log"
+
+date_val=$(date +'%Y%m%d%H%M%S')
+
+mkdir ./logs/$date_val
+
+cp ./gnss_temp.log ./logs/${date_val}
+cp ./img_temp.log ./logs/${date_val}
+
+echo "Files are found in: ./logs/${date_val}"

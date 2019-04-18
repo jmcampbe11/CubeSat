@@ -1,0 +1,250 @@
+#!/bin/bash
+
+# John M. Campbell
+# Created: 2019-03-19
+# Last edited: 2019-03-31
+
+# Description: misdev sends commands from the OBC to the GRIPS and Imager subsystems
+
+target=""
+devcmd=0
+
+usage() { echo "Usage: $0 [-t <G|I>] [-c <1-5>] [-p <U|C>] [-d <1-32767>] [-a <00-ff>] [-m <0000-ffff>]" 1>&2; }
+
+info() { cat /home/debian/John_CAN_Code/misdev_info.txt ; exit 1; }
+
+# -- Handle input options --
+while getopts ":t:c:d:p:a:m:h" options; do
+
+case "${options}" in
+
+# targeted subsystem
+t)
+target=${OPTARG}
+        if [[ "$target" != G ]] && [[ "$target" != I ]] ; then
+                echo "Issue with (-t): Please enter 'G' for GRIPS or 'I' for Imager"
+        elif [[ "$target" == G ]]; then
+                echo "Targeting GRIPS subsystem"
+        else
+                echo "Targeting Imager subsystem"
+        fi
+;;
+
+# command intended for targeted subsystem
+c)
+devcmd=${OPTARG}
+        if [[ ! $devcmd =~ ^[0-9]+$ ]]; then
+                echo "not an int"
+        elif [[ $devcmd -lt 1 ]] || [[ $devcmd -gt 7 ]]; then
+                echo "not witin range"
+        else
+                echo "Issuing command ${devcmd}"
+        fi
+;;
+
+# GRIPS: set duration of logs
+d)
+dur=${OPTARG}
+        if [[ ! $dur =~ ^[0-9]+$ ]]; then
+                echo "not an int"
+        elif [[ $dur -lt 1 ]] || [[ $dur -gt 32767 ]]; then
+                echo "not witin range"
+        else
+                durx1=$( printf '%.4x' $dur | cut -c 1-2)
+                durx2=$( printf '%.4x' $dur | cut -c 3-4)
+        fi
+;;
+
+# GRIPS: set OEM7's communication protocol
+p)
+proto=${OPTARG}
+        if [[ "$proto" != U ]] && [[ "$proto" != C ]] ; then
+                echo "Issue with (-p): Please enter 'U' for USB or 'C' for CAN & Serial"
+        else
+                echo $proto
+                if [[ "$proto" == U ]]; then
+                        # USB
+                        proto_num=01
+                        echo "Communicating over USB"
+                else
+                        # CAN Bus & Serial
+                        proto_num=02
+                        echo "Communicating over CAN & serial"
+                fi
+        fi
+;;
+
+# set address for I2C message
+a)
+addr=${OPTARG}
+
+echo "Sending to I2C address: ${addr}"
+;;
+
+# set message for I2C message
+m)
+mess=${OPTARG}
+mess1=$( echo $mess | cut -c 1-2)
+mess2=$( echo $mess | cut -c 3-4)
+
+echo "Sending I2C message: ${mess1}${mess2}"
+
+;;
+
+# display help
+h)
+        usage
+        info
+;;
+
+# otherwise display usage
+*)
+        usage
+        exit 1
+;;
+
+esac
+done
+
+# -- GRIPS commands --
+if [[ "$target" == G ]] ; then
+        case "$devcmd" in
+        1) #Begin log
+        cansend can0 567#01.${proto_num}.${durx1}.${durx2}
+        echo "Began GNSS log"
+        ;;
+
+        2) # Take RXSTATUS
+        cansend can0 567#02
+        echo "Took RXSTATUS log"
+        ;;
+
+        3) # Kill log
+        cansend can0 567#03.${proto_num}
+        echo "Killed GNSS log"
+        ;;
+
+        4) # Request log
+        cansend can0 567#04
+        echo "Requesting GNSS log"
+
+        # listen for n frames (up to 4 digit hex value for n)
+        n=$(candump -n 1 can0,010:7FF | awk '{ print $4$5$6$7 }')
+        n=$( echo $(( 0x${n} )) )
+        echo "Receiving ${n} CAN frames"
+
+        # send CAN frames to file
+        candump -n $n can0,011:7FF  > ./enc_gnss.log
+
+        # handle CAN double encoding
+        if [[ "$proto" == C ]]; then
+                cat ./enc_gnss.log | awk '{print $4 $5 " " $6 $7 " " $8 $9 " " $10 $11}' | xxd -r -p | awk '{print $4 $5 " " $6 $7 " " $8 $9 " " $10 $11}' | xxd -r -p > ./gnss.log
+        else
+                cat ./enc_gnss.log | awk '{print $4 $5 " " $6 $7 " " $8 $9 " " $10 $11}' | xxd -r -p > ./gnss.log
+        fi
+
+        echo "Log transmission complete"
+        ;;
+
+        5) # Request RX status
+        cansend can0 567#05
+        echo "Requesting RXSTATUS log"
+
+        # listen for n CAN frames (up to 4 digit hex value for n)
+        k=$(candump -n 1 can0,010:7FF | awk '{ print $4$5$6$7 }')
+        k=$( echo $(( 0x${k} )) )
+        echo "Receiving ${k} CAN frames"
+
+        # send CAN frames to file
+        candump -n $k can0,011:7FF  > ./status.log
+        cat ./status.log | awk '{print $4 $5 " " $6 $7 " " $8 $9 " " $10 $11}' | xxd -r -p > ./rxstatus.log
+
+        echo "RXSTATUS transmission complete"
+        ;;
+
+        6) # BESTPOS
+        cansend can0 567#06
+        echo "Requesting BESTPOS log"
+
+        # listen for n CAN frames (up to 4 digit hex value for n)
+        y=$(candump -n 1 can0,010:7FF | awk '{ print $4$5$6$7 }')
+        y=$( echo $(( 0x${y} )) )
+        echo "Receiving ${y} CAN frames"
+
+        # send CAN frames to file
+        candump -n $y can0,011:7FF  > ./enc_bestpos.log
+        cat ./enc_bestpos.log | awk '{print $4 $5 " " $6 $7 " " $8 $9 " " $10 $11}' | xxd -r -p > ./bestpos.log
+
+        echo "BESTPOS transmission complete"
+        ;;
+
+        7) # GET UTC TIME
+        cansend can0 567#07
+        echo "Requesting TIME log"
+
+        # listen for n CAN frames (up to 4 digit hex value for n)
+        g=$(candump -n 1 can0,010:7FF | awk '{ print $4$5$6$7 }')
+        g=$( echo $(( 0x${g} )) )
+        echo "Receiving ${g} CAN frames"
+
+        # send CAN frames to file
+        candump -n $g can0,011:7FF  > ./enc_grips_time.log
+        cat ./enc_grips_time.log | awk '{print $4 $5 " " $6 $7 " " $8 $9 " " $10 $11}' | xxd -r -p > ./grips_time.log
+
+        echo "TIME transmission complete"
+        ;;
+esac
+
+# -- Imager commands --
+else
+        case "$devcmd" in
+        1) # retrieve photo
+        cansend can0 79a#01
+        echo "Requesting photo"
+
+        # Request photo
+
+        # listen for n frames (up to 4 digit hex value for n)
+        n=$(candump -n 1 can0,050:7FF | awk '{ print $4$5$6$7 }')
+        ndec=$( echo $(( 0x${n} )) )
+        echo "Receiving ${ndec} CAN frames"
+
+        # send CAN frames to photo file
+        candump -n $ndec can0,051:7FF  > ./photo.log
+
+        cat ./photo.log | awk '{print $4 $5 " " $6 $7 " " $8 $9 " " $10 $11}' | xxd -r -p > ./photo.dat
+        cp ./photo.dat /var/lib/cloud9/to_matlab.dat
+
+        echo "Image transmission complete"
+        ;;
+
+        2) # default configuration
+        cansend can0 79a#02
+        echo "Set default configuration"
+        ;;
+
+        3) # set exposure time (accepts 1 - 32767)
+        cansend can0 79a#03.${durx1}.${durx2}
+        echo "Set exposure time"
+        ;;
+
+        4) # I2C write
+        cansend can0 79a#04.${addr}.${mess1}.${mess2}
+        echo "Wrote over I2C"
+        ;;
+
+        5) # I2C read
+        cansend can0 79a#05.${addr}
+        i2c_read=$(candump -n 1 can0,050:7FF | awk '{ print $4$5 }')
+        echo "The received I2C message is: ${i2c_read}"
+        ;;
+
+        6) # reset camera
+        cansend can0 79a#06
+        echo "Reset imager"
+        ;;
+
+        esac
+fi
+
+exit 0
