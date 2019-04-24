@@ -1,0 +1,12 @@
+#!/bin/bash
+# time_log.sh
+# Author: Alex Voisine
+# Date: March 31, 2019
+# This logs the time log on the OEM7 once
+
+echo "unlogall" > /dev/ttyUSB0
+echo "log time once" > /dev/ttyUSB0
+sleep 0.2s
+( cat < /dev/ttyUSB0 ) > /home/debian/TimeLog.txt
+sleep 0.3s
+( cat < /dev/ttyUSB0 ) >> /home/debian/TimeLog.txt
